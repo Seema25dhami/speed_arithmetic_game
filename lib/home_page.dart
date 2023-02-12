@@ -44,9 +44,15 @@ class _HomePageState extends State<HomePage> {
 
   // timer
   int timeRemaining = 0;
+
   @override
   void initState() {
     super.initState();
+    initGame();
+  }
+
+  initGame() {
+    currentLevels = Level.level1;
     timeRemaining = durationForlevel();
     generateLevelNumbers();
     initializeTimer();
@@ -77,10 +83,7 @@ class _HomePageState extends State<HomePage> {
                   onPressed: () {
                     // restart the game code
                     Navigator.pop(context);
-                    currentLevels = Level.level1;
-                    generateLevelNumbers();
-                    timeRemaining = durationForlevel();
-                    initializeTimer();
+                    initGame();
                   },
                 ),
                 ElevatedButton(
@@ -107,43 +110,6 @@ class _HomePageState extends State<HomePage> {
     timer?.cancel();
     super.dispose();
   }
-
-  // //--------Restart Function----
-  // void showRestartQuitDialog(BuildContext context) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (BuildContext context) {
-  //       return AlertDialog(
-  //         title: Text("Game Over"),
-  //         content: Text("Do you want to restart the game or quit?"),
-  //         actions: <Widget>[
-  //           ElevatedButton(
-  //             child: Text("Restart"),
-  //             onPressed: () {
-  //               // restart the game code
-  //               generateLevelNumbers();
-  //             },
-  //           ),
-  //           ElevatedButton(
-  //             child: Text("Quit"),
-  //             onPressed: () {
-  //               // quit the game code
-  //               setState(() {
-  //                 SystemNavigator.pop();
-  //               });
-  //             },
-  //           ),
-  //         ],
-  //       );
-  //     },
-  //   );
-  // }
-
-  //-------GAME OVER--------
-  // Future<void> gameOver() async {
-  //   await Future.delayed(Duration(seconds: 1));
-  //   showRestartQuitDialog(context);
-  // }
 
   //-----------Generate Levels--------------
 
