@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../const.dart';
 
 class MyButton extends StatelessWidget {
@@ -15,12 +14,12 @@ class MyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (child == 'CLEAR ALL') {
-      buttonColor = Colors.green;
-    } else if (child == 'DELETE') {
+    if (child == 'BACKSPACE') {
+      buttonColor = Color.fromARGB(255, 233, 213, 41);
+    } else if (child == 'CLEAR ALL') {
       buttonColor = Colors.red;
-    } else if (child == '=') {
-      buttonColor = Color.fromARGB(255, 13, 71, 78);
+    } else if (child == 'SUBMIT') {
+      buttonColor = Colors.green;
     }
 
     return Padding(
