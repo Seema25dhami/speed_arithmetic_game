@@ -49,44 +49,56 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     timeRemaining = durationForlevel();
     generateLevelNumbers();
+    initializeTimer();
+  }
+
+  initializeTimer() {
     timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      timeRemaining -= 1;
-      if (timeRemaining <= 0) {
-        timer.cancel();
-        if (timeRemaining == 0 && correctAttempts < 5) {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text("Game Over"),
-                content: Text("Do you want to restart the game or quit?"),
-                actions: <Widget>[
-                  ElevatedButton(
-                    child: Text("Restart"),
-                    onPressed: () {
-                      // restart the game code
-                      Navigator.pop(context);
-                      currentLevels = Level.level1;
-                      checkResult();
-                    },
-                  ),
-                  ElevatedButton(
-                    child: Text("Quit"),
-                    onPressed: () {
-                      // quit the game code
-                      setState(() {
-                        SystemNavigator.pop();
-                      });
-                    },
-                  ),
-                ],
-              );
-            },
-          );
-        }
-      }
-      setState(() {}); // displays the updated state of the remaining time
+      onTimerTick();
+      // displays the updated state of the remaining time
     });
+  }
+
+  onTimerTick() {
+    timeRemaining -= 1;
+    if (timeRemaining <= 0) {
+      timer?.cancel();
+      if (timeRemaining == 0 && correctAttempts < 5) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              backgroundColor: Colors.cyan[200],
+              title: Text("Game Over"),
+              content: Text("Do you want to restart the game or quit?"),
+              actions: <Widget>[
+                ElevatedButton(
+                  child: Text("Restart"),
+                  onPressed: () {
+                    // restart the game code
+                    Navigator.pop(context);
+                    currentLevels = Level.level1;
+                    generateLevelNumbers();
+                    timeRemaining = durationForlevel();
+                    initializeTimer();
+                  },
+                ),
+                ElevatedButton(
+                  child: Text("Quit"),
+                  onPressed: () {
+                    // quit the game code
+                    setState(() {
+                      SystemNavigator.pop();
+                    });
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      }
+    }
+    setState(() {});
   }
 
   @override

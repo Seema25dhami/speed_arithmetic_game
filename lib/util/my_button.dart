@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import '../const.dart';
 
@@ -5,6 +7,7 @@ class MyButton extends StatelessWidget {
   final String child;
   final VoidCallback onTap; //accept the funtion and pass thorugh the button
   var buttonColor = Color.fromARGB(255, 37, 109, 119);
+  var textStyle = whiteTextStyle;
 
   MyButton({
     Key? key,
@@ -16,10 +19,13 @@ class MyButton extends StatelessWidget {
   Widget build(BuildContext context) {
     if (child == 'BACKSPACE') {
       buttonColor = Color.fromARGB(255, 233, 213, 41);
+      textStyle = actionButtonTextStyle;
     } else if (child == 'CLEAR ALL') {
       buttonColor = Colors.red;
+      textStyle = actionButtonTextStyle;
     } else if (child == 'SUBMIT') {
       buttonColor = Colors.green;
+      textStyle = actionButtonTextStyle;
     }
 
     return Padding(
@@ -34,7 +40,7 @@ class MyButton extends StatelessWidget {
           child: Center(
             child: Text(
               child,
-              style: whiteTextStyle,
+              style: textStyle,
             ),
           ),
         ),
