@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +11,12 @@ import 'package:speed_arithmetic_game/const.dart';
 import 'package:speed_arithmetic_game/util/level.dart';
 import 'package:speed_arithmetic_game/util/my_button.dart';
 import 'package:speed_arithmetic_game/util/result_message.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  runApp(HomePage());
+}
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -30,7 +38,10 @@ class _HomePageState extends State<HomePage> {
    Delete (Backspace) and Clear all and colors swap
    Submit and = 
    2 alert box for leveling up and restarting
-   question position
+   firebase storage of player's current score
+    add feature to dialog box to not shut on tapping on screen
+
+   
    */
 
   // player score
@@ -52,6 +63,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   initGame() {
+    playerScore = 0;
+    correctAttempts = 0;
     currentLevels = Level.level1;
     timeRemaining = durationForlevel();
     generateLevelNumbers();
@@ -71,6 +84,7 @@ class _HomePageState extends State<HomePage> {
       timer?.cancel();
       if (timeRemaining == 0 && correctAttempts < 5) {
         showDialog(
+          barrierDismissible: false,
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
@@ -120,13 +134,15 @@ class _HomePageState extends State<HomePage> {
   generateLevelNumbers() {
     switch (currentLevels) {
       case Level.level1:
-        num1 = randomNumber.nextInt(990);
-        num2 = randomNumber.nextInt(999);
+        num1 = randomNumber.nextInt(9);
+        num2 = randomNumber.nextInt(9);
         break;
       // for level 2 - subtraction
       case Level.level2:
-        num1 = randomNumber.nextInt(999);
-        num2 = randomNumber.nextInt(99);
+        num1 = randomNumber.nextInt(100);
+        do {
+          num2 = randomNumber.nextInt(num1);
+        } while (num1 - num2 > 9); // ensure result is a single digit number
         break;
       // level 3 - 2 digit multiplication with a single digit
       case Level.level3:
@@ -158,23 +174,23 @@ class _HomePageState extends State<HomePage> {
     switch (currentLevels) {
       case Level.level1:
         levelNo = 1;
-        oper1 = "+";
+        oper1 = " + ";
         return 45;
       case Level.level2:
         levelNo = 2;
-        oper1 = "-";
+        oper1 = " - ";
         return 45;
       case Level.level3:
         levelNo = 3;
-        oper1 = "X";
+        oper1 = " X ";
         return 60;
       case Level.level4:
         levelNo = 4;
-        oper1 = "/";
+        oper1 = " / ";
         return 60;
       case Level.level5:
         levelNo = 5;
-        oper1 = "X";
+        oper1 = " X ";
         return 60;
       default:
         return 1;
@@ -225,8 +241,10 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+//-----Dialog boxes--------
   showSuccessDialog() {
     showDialog(
+        barrierDismissible: false,
         context: context,
         builder: (context) {
           return ResultMessage(
@@ -238,6 +256,7 @@ class _HomePageState extends State<HomePage> {
 
   showIncorrectDialog() {
     showDialog(
+        barrierDismissible: false,
         context: context,
         builder: (context) {
           return ResultMessage(
@@ -248,6 +267,76 @@ class _HomePageState extends State<HomePage> {
         });
   }
 
+  showNextLevelDialog() {
+    timer?.cancel();
+    showDialog(
+      barrierDismissible: false,
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.cyan[200],
+          title: Text("Hurray! You cleared the level"),
+          content: Text("Continue  or quit?"),
+          actions: <Widget>[
+            ElevatedButton(
+              child: Text("Continue"),
+              onPressed: () {
+                // restart the game code
+                Navigator.pop(context);
+                initializeTimer();
+                // Continue to the next level after the pop up  message
+              },
+            ),
+            ElevatedButton(
+              child: Text("Quit"),
+              onPressed: () {
+                // quit the game code
+                setState(() {
+                  SystemNavigator.pop();
+                }); // need to save the state of the game which will help to come back and continue the game
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  showRestartGameDialog() {
+    timer?.cancel();
+    showDialog(
+      barrierDismissible: false,
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.cyan[200],
+          title: Text("Hurray! You've scored a full 25/25"),
+          content: Text("Restart Again  or quit?"),
+          actions: <Widget>[
+            ElevatedButton(
+              child: Text("Restart"),
+              onPressed: () {
+                // restart the game code
+                Navigator.pop(context);
+                initializeTimer();
+                // Continue to the next level after the pop up  message
+              },
+            ),
+            ElevatedButton(
+              child: Text("Quit"),
+              onPressed: () {
+                // quit the game code
+                setState(() {
+                  SystemNavigator.pop();
+                }); // need to save the state of the game which will help to come back and continue the game
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   String oper1 = '+';
 
   // check if user answer is correct or not
@@ -256,13 +345,16 @@ class _HomePageState extends State<HomePage> {
       case Level.level1:
         if (num1 + num2 == int.parse(userAnswer)) {
           correctAttempts += 1;
+          playerScore += 1;
           if (correctAttempts == 5) {
+            showNextLevelDialog();
+            userAnswer = '';
             currentLevels = Level.level2;
             correctAttempts = 0;
             timeRemaining = durationForlevel();
+          } else {
+            showSuccessDialog();
           }
-
-          showSuccessDialog();
         } else {
           showIncorrectDialog();
         }
@@ -270,12 +362,17 @@ class _HomePageState extends State<HomePage> {
       case Level.level2:
         if (num1 - num2 == int.parse(userAnswer)) {
           correctAttempts += 1;
+          playerScore += 1;
           if (correctAttempts == 5) {
+            showNextLevelDialog();
+            userAnswer = '';
             currentLevels = Level.level3;
             correctAttempts = 0;
             timeRemaining = durationForlevel();
           }
-          showSuccessDialog();
+          if (correctAttempts < 5) {
+            showSuccessDialog();
+          }
         } else {
           showIncorrectDialog();
         }
@@ -283,12 +380,17 @@ class _HomePageState extends State<HomePage> {
       case Level.level3:
         if (num1 * num2 == int.parse(userAnswer)) {
           correctAttempts += 1;
+          playerScore += 1;
           if (correctAttempts == 5) {
+            showNextLevelDialog();
+            userAnswer = '';
             currentLevels = Level.level4;
             correctAttempts = 0;
             timeRemaining = durationForlevel();
           }
-          showSuccessDialog();
+          if (correctAttempts < 5) {
+            showSuccessDialog();
+          }
         } else {
           showIncorrectDialog();
         }
@@ -296,13 +398,18 @@ class _HomePageState extends State<HomePage> {
       case Level.level4:
         if (num1 ~/ num2 == int.parse(userAnswer)) {
           correctAttempts += 1;
+          playerScore += 1;
           if (correctAttempts == 5) {
+            showNextLevelDialog();
+            userAnswer = '';
             currentLevels = Level.level5;
             correctAttempts = 0;
             timeRemaining = durationForlevel();
           }
 
-          showSuccessDialog();
+          if (correctAttempts < 5) {
+            showSuccessDialog();
+          }
         } else {
           showIncorrectDialog();
         }
@@ -311,14 +418,19 @@ class _HomePageState extends State<HomePage> {
         // operator2 = 'X';
         if (num1 * num2 == int.parse(userAnswer)) {
           correctAttempts += 1;
+          playerScore += 1;
           if (correctAttempts == 5) {
-            // restart thw whole game or quit game
+            // restart the whole game or quit game
+            showRestartGameDialog();
+            userAnswer = '';
             currentLevels = Level.level1;
             correctAttempts = 0;
             timeRemaining = durationForlevel();
           }
 
-          showSuccessDialog();
+          if (correctAttempts < 5) {
+            showSuccessDialog();
+          }
         } else {
           showIncorrectDialog();
         }
@@ -391,7 +503,21 @@ class _HomePageState extends State<HomePage> {
               Text(
                 "$correctAttempts / 5",
                 style: TextStyle(color: Colors.greenAccent, fontSize: 25),
-              )
+              ),
+              SizedBox(
+                width: 20,
+              ),
+              Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Text(
+                  "Score :",
+                  style: newTextStyle,
+                ),
+              ),
+              Text(
+                "$playerScore / 25",
+                style: TextStyle(color: Colors.greenAccent, fontSize: 25),
+              ),
             ]),
           ),
           //question
