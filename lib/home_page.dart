@@ -2,24 +2,28 @@ import 'dart:async';
 import 'dart:math';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/src/widgets/container.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:speed_arithmetic_game/const.dart';
+
 import 'package:speed_arithmetic_game/util/level.dart';
 import 'package:speed_arithmetic_game/util/my_button.dart';
 import 'package:speed_arithmetic_game/util/result_message.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(HomePage());
-}
+import 'homescreen.dart';
+
+// void main() async {
+//   WidgetsFlutterBinding.ensureInitialized();
+//   await Firebase.initializeApp();
+//   runApp(const HomePage(resume: null,));
+// }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final bool resume;
+  const HomePage({Key? key, required this.resume}) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -56,14 +60,30 @@ class _HomePageState extends State<HomePage> {
   // timer
   int timeRemaining = 0;
 
+  bool Stop = false;
+
+  // Future<void> loadGameState() async {
+  //   SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   setState(() {
+  //     playerScore = prefs.getInt('playerScore') ?? 0;
+  //     levelNo = prefs.getInt('levelNo') ?? 1;
+  //     correctAttempts = prefs.getInt('correctAttempts') ?? 0;
+  //   });
+  // }
+
   @override
   void initState() {
     super.initState();
-    initGame();
+    if (widget.resume) {
+      resumeGame();
+    } else {
+      initGame();
+    }
   }
 
   initGame() {
     playerScore = 0;
+    userAnswer = '';
     correctAttempts = 0;
     currentLevels = Level.level1;
     timeRemaining = durationForlevel();
@@ -76,6 +96,43 @@ class _HomePageState extends State<HomePage> {
       onTimerTick();
       // displays the updated state of the remaining time
     });
+  }
+
+  void stopGame() async {
+    // Save game state to shared preferences
+    setCurrentLevel(currentLevels);
+
+    // Navigate to home screen
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => HomeScreen()),
+    );
+  }
+
+  void setCurrentLevel(Level level) {
+    currentLevels = level;
+    savedGame();
+  }
+
+  void savedGame() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('currentLevels', currentLevels.index);
+    await prefs.setInt('score', playerScore);
+    await prefs.setInt('correctAttempts', correctAttempts);
+  }
+
+  void resumeGame() async {
+    // Load game state from shared preferences
+    final prefs = await SharedPreferences.getInstance();
+    int index = prefs.getInt('currentLevels') ?? 0;
+    currentLevels = Level.values[index];
+    playerScore = prefs.getInt('score') ?? 0;
+    correctAttempts = prefs.getInt('correctAttempts') ?? 0;
+
+    // Start timer
+    initializeTimer();
+    timeRemaining = durationForlevel();
+    generateLevelNumbers();
   }
 
   onTimerTick() {
@@ -140,9 +197,11 @@ class _HomePageState extends State<HomePage> {
       // for level 2 - subtraction
       case Level.level2:
         num1 = randomNumber.nextInt(100);
-        do {
-          num2 = randomNumber.nextInt(num1);
-        } while (num1 - num2 > 9); // ensure result is a single digit number
+        num2 = randomNumber.nextInt(100);
+        // do {
+        while (num2 > num1) {
+          num2 = randomNumber.nextInt(100);
+        } // ensure result is a single digit number
         break;
       // level 3 - 2 digit multiplication with a single digit
       case Level.level3:
@@ -290,6 +349,7 @@ class _HomePageState extends State<HomePage> {
             ElevatedButton(
               child: Text("Quit"),
               onPressed: () {
+                savedGame();
                 // quit the game code
                 setState(() {
                   SystemNavigator.pop();
@@ -350,6 +410,7 @@ class _HomePageState extends State<HomePage> {
             showNextLevelDialog();
             userAnswer = '';
             currentLevels = Level.level2;
+            generateLevelNumbers();
             correctAttempts = 0;
             timeRemaining = durationForlevel();
           } else {
@@ -360,13 +421,14 @@ class _HomePageState extends State<HomePage> {
         }
         break;
       case Level.level2:
-        if (num1 - num2 == int.parse(userAnswer)) {
+        if ((num1 - num2).abs() == int.parse(userAnswer)) {
           correctAttempts += 1;
           playerScore += 1;
           if (correctAttempts == 5) {
             showNextLevelDialog();
             userAnswer = '';
             currentLevels = Level.level3;
+            generateLevelNumbers();
             correctAttempts = 0;
             timeRemaining = durationForlevel();
           }
@@ -385,6 +447,7 @@ class _HomePageState extends State<HomePage> {
             showNextLevelDialog();
             userAnswer = '';
             currentLevels = Level.level4;
+            generateLevelNumbers();
             correctAttempts = 0;
             timeRemaining = durationForlevel();
           }
@@ -403,6 +466,7 @@ class _HomePageState extends State<HomePage> {
             showNextLevelDialog();
             userAnswer = '';
             currentLevels = Level.level5;
+            generateLevelNumbers();
             correctAttempts = 0;
             timeRemaining = durationForlevel();
           }
@@ -424,6 +488,7 @@ class _HomePageState extends State<HomePage> {
             showRestartGameDialog();
             userAnswer = '';
             currentLevels = Level.level1;
+            generateLevelNumbers();
             correctAttempts = 0;
             timeRemaining = durationForlevel();
           }
@@ -469,6 +534,7 @@ class _HomePageState extends State<HomePage> {
       body: Column(
         children: [
           //level progress , player need to level up after 5 correct answers
+
           Container(
             height: 100, // cyan color ranges
             color: Color.fromARGB(255, 16, 67, 74),
@@ -546,6 +612,15 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
+                    SizedBox(
+                      width: 100,
+                      height: 100,
+                    ),
+                    IconButton(
+                      onPressed: stopGame,
+                      icon: Icon(Icons.stop_circle),
+                      iconSize: 50,
+                    )
                   ],
                 ),
               ),
